@@ -135,8 +135,58 @@ async function scopedThreads (ctx, officialHandler, keyword, hideSpam) {
   })
 }
 
+function md5hex (value) {
+  return createHash('md5').update(value).digest('hex')
+}
+
+/**
+ * Compatibility with the official 2.0.x admin panel: it sends
+ * `password`/`accessToken` already hashed as md5, while common re-hashes every
+ * input before comparing against the stored ADMIN_PASS. When a credential is
+ * literally the stored hash, give this request an ADMIN_PASS view of
+ * md5(ADMIN_PASS) so upstream comparisons succeed without touching the store.
+ */
+function adminCompatView (ctx) {
+  const stored = ctx.config?.ADMIN_PASS
+  if (typeof stored !== 'string' || !stored) return ctx
+  const candidates = [ctx.request?.body?.password, ctx.request?.body?.accessToken]
+  for (const candidate of candidates) {
+    if (typeof candidate !== 'string' || !candidate) continue
+    if (md5hex(candidate) === stored) return ctx
+    if (candidate === stored) {
+      return { ...ctx, config: { ...ctx.config, ADMIN_PASS: md5hex(stored) } }
+    }
+  }
+  return ctx
+}
+
+const COMPAT_EVENTS = [
+  'LOGIN',
+  'GET_PASSWORD_STATUS',
+  'SET_PASSWORD',
+  'COMMENT_GET_FOR_ADMIN',
+  'COMMENT_SET_FOR_ADMIN',
+  'COMMENT_DELETE_FOR_ADMIN',
+  'COMMENT_IMPORT_FOR_ADMIN',
+  'COMMENT_EXPORT_FOR_ADMIN',
+  'GET_CONFIG_FOR_ADMIN',
+  'SET_CONFIG'
+]
+
+function installAdminPanelCompat () {
+  const wrapped = new Set()
+  for (const event of COMPAT_EVENTS) {
+    const official = resolveHandler(event)
+    if (!official || wrapped.has(official)) continue
+    const compatHandler = ctx => official(adminCompatView(ctx))
+    wrapped.add(compatHandler)
+    registerHandler(event, compatHandler)
+  }
+}
+
 /** Install small, version-tested wrappers around the registered upstream API. */
 export function installEnhancements () {
+  installAdminPanelCompat()
   const officialHandler = resolveHandler('COMMENT_GET')
   if (!officialHandler) throw new Error('Official COMMENT_GET handler is not registered')
   if (installedHandlers.has(officialHandler)) return
