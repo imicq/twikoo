@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Twikoo 评论管理</title>
+<style>
+  body { font-family: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; margin: 0; background: #f6f7f9; }
+  header { background: #fff; border-bottom: 1px solid #e5e7eb; padding: 14px 20px; display: flex; align-items: center; gap: 12px; }
+  header h1 { font-size: 1.05rem; margin: 0; }
+  header span { color: #888; font-size: .82rem; }
+  #tcomment { max-width: 880px; margin: 24px auto 60px; padding: 0 16px; }
+  .tip { max-width: 880px; margin: 16px auto 0; padding: 10px 16px; background: #fff8e6; border: 1px solid #f5deb3; border-radius: 8px; color: #8a6d1a; font-size: .85rem; }
+</style>
+</head>
+<body>
+<header>
+  <h1>💬 Twikoo 评论管理</h1>
+  <span>2.0.13 · 登录后可审核、删除、回复评论，并配置邮件通知、反垃圾等</span>
+</header>
+<div class="tip">输入 Twikoo 管理密码登录（首次在下方输入的密码即成为管理密码）。管理面板由评论组件右上角齿轮按钮展开。</div>
+<div id="tcomment"></div>
+<script src="/js/twikoo.all.min.js"></script>
+<script>
+  twikoo.init({ envId: location.origin, el: '#tcomment' });
+  // 自动点开管理面板（评论工具条上的齿轮图标）
+  (function openAdmin() {
+    let tries = 0;
+    const timer = setInterval(function () {
+      tries++;
+      if (document.querySelector('.tk-admin')) { clearInterval(timer); return; }
+      const spans = document.querySelectorAll('.tk-icon.__comments');
+      for (const s of spans) {
+        // 齿轮图标的 SVG path 以 M195.1 开头（font-awesome cog）
+        if (s.innerHTML.indexOf('M195.1') !== -1) { s.click(); break; }
+      }
+      if (tries > 20) clearInterval(timer);
+    }, 700);
+  })();
+</script>
+</body>
+</html>

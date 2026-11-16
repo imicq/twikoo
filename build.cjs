@@ -17,6 +17,10 @@ async function main () {
   // Only these static files are published; never expose src/tests/the server bundle.
   fs.mkdirSync(path.join(root, 'public'), { recursive: true })
   fs.copyFileSync(path.join(root, 'favicon.ico'), path.join(root, 'public/favicon.ico'))
+  // 独立管理页（源文件在 admin/ 目录，构建时拷贝到 public/ 发布）
+  if (fs.existsSync(path.join(root, 'admin'))) {
+    fs.cpSync(path.join(root, 'admin'), path.join(root, 'public'), { recursive: true })
+  }
   // Build inputs are mandatory: fail a deployment rather than silently losing IP lookup.
   const data = fs.readFileSync(dbPath)
   const base64 = zlib.gzipSync(data, { level: 9 }).toString('base64')
